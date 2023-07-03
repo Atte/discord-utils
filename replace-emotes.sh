@@ -20,11 +20,11 @@ function api {
 emotes="$(api "guilds/$DISCORD_GUILD/emojis")"
 
 while read -r filename; do
+    echo "$filename"
     ext="${filename##*.}"
     name="$(basename "$filename" ".$ext")"
 
-    image="data:image/$ext;base64,$(base64 "$filename")"
-    jq --null-input --arg name "$name" --arg image "$image" '{ $name, $image }' |\
+    jq --raw-input --slurp --arg name "$name" '{ $name, image: . }' <<<"data:image/$ext;base64,$(base64 "$filename")" |\
         api "guilds/$DISCORD_GUILD/emojis" -X POST --data-binary @- | jq >&2
     
     while read -r id; do
@@ -32,6 +32,5 @@ while read -r filename; do
     done < <(jq --raw-output --arg name "$name" '.[] | select(.name == $name) | .id' <<<"$emotes")
 
     mv "$filename" "$folder/uploaded/"
-    echo "$name"
-    sleep 10
+    sleep 20
 done < <(find "$folder/todo/" -type f -name '*.png' -o -name '*.gif' -o -name '*.jpeg')
